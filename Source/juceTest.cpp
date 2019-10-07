@@ -14,50 +14,102 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 
 
-struct gcGetContext : csnd::Plugin<1, 1>
+class OpenGLWindow : public Component, private OpenGLRenderer, public Timer
 {
-    
-    Image** image;
-    Graphics** gc;
-    
-    int init() {
-        image = (Image**)csound->query_global_variable("graphics1");
-        if(*image != nullptr){
-            csound->message("graphics Context is valid");
-            csound->create_global_variable("graphicsContext1", sizeof(Graphics*));
-            Graphics** gc = (Graphics**)csound->query_global_variable("graphicsContext1");
-            *gc = new Graphics(**image);
-        }
-        else
-            csound->message("graphics context not found");
-        
-        return OK;
+public:
+    OpenGLWindow():Component("OpenGL")
+    {
+//        startTimer(1000);
+    };
+
+    ~OpenGLWindow(){};
+
+    void timerCallback() override
+    {
+        jassertfalse;
+//        csound->message("Hello from timer");
+    }
+    void newOpenGLContextCreated() override
+    {
+        jassertfalse;
+    };
+
+    void start()
+    {
+        jassertfalse;
+    }
+
+    void openGLContextClosing() override
+    {
+        jassertfalse;
+    }
+    void renderOpenGL() override
+    {
+        glBegin(GL_POLYGON);
+        glColor3d(255,0,0);
+        int x1 = 20;
+        int y1 = 20;
+        double halfside = 40 / 2;
+        glVertex2d(x1 + halfside, y1 + halfside);
+        glVertex2d(x1 + halfside, y1 - halfside);
+        glVertex2d(x1 - halfside, y1 - halfside);
+        glVertex2d(x1 - halfside, y1 + halfside);
+        glEnd();
     }
 };
 
+
+
 struct gcFillEllipse : csnd::Plugin<1, 4>
 {
-    Graphics** gc;
+    OpenGLWindow* openGLWindow;
 
-    int init() {
-        gc = (Graphics**)csound->query_global_variable("graphicsContext1");
-        if(*gc != nullptr){
-            csound->message("graphics Context is valid");
-            graphics->fillEllipse(inargs[0], inargs[1], inargs[2], inargs[3]);
-        }
-        else
-            csound->message("graphics context not found");
 
+    int init()
+    {
+        initialiseJuce_GUI();
+        openGLWindow = new OpenGLWindow();
+        openGLWindow->addToDesktop(ComponentPeer::windowHasTitleBar);
         return OK;
     }
     
     int kperf() {
-        if(*gc != nullptr)
-        {
-            *gc->fillAll(Colours::black);
-            *gc->setColour(Colours::red);
-            *gc->fillEllipse(inargs[0], inargs[1], inargs[2], inargs[3]);
-        }
+        if(openGLWindow != nullptr)
+            openGLWindow->start();
+//        csound->create_global_variable("component", sizeof(Component*));
+//        Component** gc = (Component**)csound->query_global_variable("component");
+//
+//        if(gc != NULL  && firstTimeCallback)
+//        {
+////
+//            openGLContext.setRenderer (this);
+//            openGLContext.setContinuousRepainting (false);
+//            firstTimeCallback = false;
+////            renderOpenGL();
+//        }
+
+//    csound->message("Hello");
+//        if(openGLContext.isAttached() == false && gc != NULL) {
+//            const MessageManagerLock mml(ThreadPoolJob::getCurrentThreadPoolJob());
+//            if (mml.lockWasGained()) {
+//                    return OK;
+//                }
+//            openGLContext.attachTo(**gc);
+//            }
+
+
+
+
+
+//        Colour** c = (Colour**)csound->query_global_variable("currentColour");
+//        if(*image != nullptr){
+//            Graphics graphics(**image);
+//            graphics.setColour(**c);
+//            graphics.fillEllipse(inargs[0], inargs[1], inargs[2], inargs[3]);
+//        }
+//        else
+//            csound->message("graphics context not found");
+
         return OK;
     }
 };
@@ -72,7 +124,7 @@ struct gcFillAll : csnd::Plugin<1, 4>
         if(*gc != nullptr){
             csound->message("graphics Context is valid");
             Graphics g(**gc);
-            g.fillAll(Colour(255, 0, 0));
+            g.fillAll(Colour(uint8(inargs[0]), uint8(inargs[1]), uint8(inargs[2]), uint8(inargs[3])));
         }
         else
             csound->message("graphics context not found");
@@ -84,7 +136,7 @@ struct gcFillAll : csnd::Plugin<1, 4>
         if(*gc != nullptr)
         {
             Graphics g(**gc);
-            g.fillAll(Colour(255, 0, 0));
+            g.fillAll(Colour(uint8(inargs[0]), uint8(inargs[1]), uint8(inargs[2]), uint8(inargs[3])));
         }
         return OK;
     }
@@ -92,15 +144,16 @@ struct gcFillAll : csnd::Plugin<1, 4>
 
 struct gcSetColour : csnd::Plugin<1, 4>
 {
-    
+
     Image** gc;
     
     int init() {
-        gc = (Image**)csound->query_global_variable("graphics1");
-        if(*gc != nullptr){
+        csound->create_global_variable("currentColour", sizeof(Colour*));
+        Colour** c = (Colour**)csound->query_global_variable("currentColour");
+        *c = new Colour(0.f, 0.f, 0.f, 0.f);//image;
+        if(*c != nullptr){
             csound->message("graphics Context is valid");
-            Graphics g(**gc);
-            g.setColour(Colours::yellow);
+            *c = new Colour(uint8(inargs[0]), uint8(inargs[1]), uint8(inargs[2]), uint8(inargs[3]));
         }
         else
             csound->message("graphics context not found");
@@ -109,11 +162,14 @@ struct gcSetColour : csnd::Plugin<1, 4>
     }
     
     int kperf() {
-        if(*gc != nullptr)
-        {
-            Graphics g(**gc);
-            g.setColour(Colours::yellow);
+        Colour** c = (Colour**)csound->query_global_variable("currentColour");
+        *c = new Colour(0.f, 0.f, 0.f, 0.f);//image;
+        if(*c != nullptr){
+            *c = new Colour(uint8(inargs[0]), uint8(inargs[1]), uint8(inargs[2]), uint8(inargs[3]));
         }
+        else
+            csound->message("graphics context not found");
+
         return OK;
     }
 };
@@ -127,7 +183,6 @@ struct gcSetColour : csnd::Plugin<1, 4>
  overloads are called "mult"
  */
 void csnd::on_load(Csound *csound) {
-    csnd::plugin<gcGetContext>(csound, "gcGetContext.i", "i", "i", csnd::thread::i);
     csnd::plugin<gcFillEllipse>(csound, "gcFillEllipse.ii", "i", "iiii", csnd::thread::i);
     csnd::plugin<gcFillEllipse>(csound, "gcFillEllipse.ik", "k", "kkkk", csnd::thread::ik);
     csnd::plugin<gcFillAll>(csound, "gcFillAll.ii", "i", "iiii", csnd::thread::i);
