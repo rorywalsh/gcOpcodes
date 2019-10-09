@@ -16,11 +16,13 @@
 
 class OpenGLWindow : public Component, public Timer
 {
-    OpenGLContext openGLContext;
-
+    float x=0;
+    Image image;
 public:
-    OpenGLWindow():Component("OpenGL")
+    OpenGLContext* openGL;
+    OpenGLWindow():Component("OpenGL"), image(Image::RGB, 100, 100, true)
     {
+        setSize(400, 300);
 // openGLContext.setRenderer (this);
 // openGLContext.setContinuousRepainting (false);
 // startTimer(1000);
@@ -33,14 +35,22 @@ public:
 // jassertfalse;
 // csound->message("Hello from timer");
     }
-
-    void paint(Graphics& g)
+    
+    void paint(Graphics& g) override
     {
 // jassertfalse;
+        g.drawImageAt(image, 0, 0);
+    }
+    
+    void drawImage()
+    {
+        Graphics g(image);
         g.fillAll(Colours::red);
         g.setColour(Colours::blue);
-        Random rand;
-        g.fillEllipse(rand.nextFloat()*100, rand.nextFloat()*100, 10, 10);
+        
+        g.fillEllipse(sin(x)*100, sin(x)*100, 10, 10);
+        x+=0.5;
+        repaint();
     }
 // void newOpenGLContextCreated() override
 // {
@@ -76,20 +86,36 @@ public:
 struct gcFillEllipse : csnd::Plugin<1, 4>
 {
     OpenGLWindow* openGLWindow;
-
-
+    Component** gc;
+    OpenGLContext** openGL;
+    int kIndex;
     int init()
     {
+        kIndex = 0;
         initialiseJuce_GUI();
+        csound->message(String(ksmps()).toUTF8().getAddress());
         openGLWindow = new OpenGLWindow();
 // openGLWindow->addToDesktop(ComponentPeer::windowHasTitleBar);
-        Component** gc = (Component**)csound->query_global_variable("component");
+        gc = (Component**)csound->query_global_variable("component");
         *gc = openGLWindow;
+        
         return OK;
     }
 
     int kperf() {
-        ->repaint();
+        if(*gc != nullptr && kIndex==1000)
+        {
+            kIndex = 0;
+            const MessageManagerLock mml(ThreadPoolJob::getCurrentThreadPoolJob());
+            static_cast<OpenGLWindow*>(*gc)->drawImage();
+//            const MessageManagerLock mml(ThreadPoolJob::getCurrentThreadPoolJob());
+//            if(Component* comp = dynamic_cast<Component*>(*gc))
+//            {
+//                comp->getParentComponent()->repaint();
+//            }
+//            static_cast<OpenGLWindow*>(*gc)->getParentComponent()->repaint();
+        }
+        kIndex++;
 // if(openGLWindow != nullptr)
 // openGLWindow->start();
 // csound->create_global_variable("component", sizeof(Component*));
